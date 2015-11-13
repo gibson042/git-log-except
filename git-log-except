@@ -1,0 +1,89 @@
+#!/bin/sh
+NAME='https://github.com/gibson042/git-log-except'
+VERSION=0.0.1
+DESCRIPTION='Executes git log, excluding commits matching provided filters.'
+USAGE='<command> |\
+       [[--]verbose] <filter options> [-- <format options> [-- <revision range> [-- <path>...]]]\
+\
+Commands:\
+   [--]help     Display this message\
+   [--]version  Show software version'
+
+# Exit immediately upon failure
+set -e
+
+# Self-identify, ignoring a useless $0 in git alias invocations
+[ "$1" = --version ] && echo $VERSION >&2
+[ "$1" = --version ] && exit 64
+[ "$1" = version ] && echo $VERSION >&2
+[ "$1" = version ] && exit 64
+CMD="$0"
+command -v "$CMD" >/dev/null 2>&1 ||
+	{ printf %s "$CMD" | grep [[:space:]] >/dev/null 2>&1 && CMD=; }
+
+# usage [<error message> [<exit code>]]
+usage () {
+	summary=$(printf '%s %s\n%s' "$NAME" "$VERSION" "$DESCRIPTION")
+	printf '%s\nUsage: %s %s\n' "${1:-$summary}" "$CMD" "$USAGE" | sed 's/\\//g' >&2
+	exit ${2:-64}
+}
+
+main () {
+	[ $# -eq 0 -o "$1" = --help -o "$1" = help ] && usage
+	VERBOSE=:
+	[ "$1" = --verbose -o "$1" = verbose ] && shift && VERBOSE=
+
+	# Chunk CLI options/arguments
+	filters=$(cli_group 0 "$@" 2>/dev/null)
+	next_index=$(cli_group 0 "$@" 2>&1 1>/dev/null)
+	format=$(cli_group $next_index "$@" 2>/dev/null)
+	next_index=$(cli_group $next_index "$@" 2>&1 1>/dev/null)
+	rev=$(cli_group $next_index "$@" 2>/dev/null)
+	next_index=$(cli_group $next_index "$@" 2>&1 1>/dev/null)
+	path=$(cli_group -$next_index "$@" 2>/dev/null)
+	$VERBOSE printf >&2 'Filters: %s\nFormat: %s\nRevision: %s\nPath: %s\n' \
+		"$filters" "$format" "$rev" "$path"
+
+	# Write commits-to-exclude (matching the filters) to an auto-removed temp file
+	tmp=$(mktemp)
+	trap "rm -fr \"\$tmp\"" 0
+	[ -z "$filters" ] || { eval "set -- git log $filters $rev --format=%H -- $path"; "$@" >"$tmp"; }
+	$VERBOSE awk >&2 -v MSG='Commits to exclude: ' -v HEAD=3 \
+		'NR<=HEAD{l=l ORS $0} END{print MSG NR l; if(NR>HEAD) print "..."; else print "---"}' "$tmp"
+
+	# Log _only_ (--no-walk) those commits NOT found above
+	{ eval "set -- git log $rev --format=%H -- $path"; "$@"; } | grep -vFf "$tmp" |
+		{ eval "set -- git log $format --stdin --no-walk"; "$@"; }
+}
+
+# cli_group <start index> <option|argument>...
+# Collect options/arguments from start index to the next "--"
+# If start index is negative, collect everything from its negation
+# Return them quoted in an eval-safe string
+# Write the next index (i.e., first index after the "--") on STDERR
+cli_group () {
+	i=-1
+	for opt do
+		# Increment, suppressing nonzero exit codes from 0 results
+		i=$(expr 1 + $i || true)
+
+		# Skip up to start index; break on "--"
+		[ $i -gt $1 -a $i -gt $(expr 0 - $1) ] || continue
+		[ "$opt" != -- -o $1 -lt 0 ] || break
+
+		# Use printf and single quotes to guarantee escape sequence preservation
+		printf %s\\n "$opt" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' /" | head -c -1
+	done
+
+	# Output the new index on STDERR
+	echo $i >&2
+}
+
+# Normal mode relies on script arguments
+if [ -n "$CMD" ]; then
+	main "$@"
+	exit
+fi
+
+# git alias mode uses the appended arguments
+main
