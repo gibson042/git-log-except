@@ -2,6 +2,7 @@
 NAME='https://github.com/gibson042/git-log-except'
 VERSION=0.0.1
 DESCRIPTION='Show git commits not matching provided filters, honoring all git log options.'
+LICENSE='This is free and unencumbered software released into the public domain.'
 USAGE='<command> |\
        [[--]verbose] [<exclusion options>] [-- <output options>] [<commit range>] [[--] <path>...]\
 \
@@ -20,8 +21,8 @@ if { printf %s "$CMD" | grep [[:space:]] && ! command -v "$CMD"; } >/dev/null 2>
 # usage [<error message> [<exit code>]]
 usage () {
 	message="$1"
-	if [ -z "$message" ]; then message="`printf '%s %s\n%s' "$NAME" "$VERSION" "$DESCRIPTION"`"; fi
-	printf '%s\nUsage: %s %s\n' "$message" "$CMD" "$USAGE" | sed 's/\\//g' >&2
+	if [ -z "$1" ]; then message="`printf '%s %s\n%s' "$NAME" "$VERSION" "$DESCRIPTION"`"; fi
+	printf '%s\n\nUsage: %s %s\n\n%s\n' "$message" "$CMD" "$USAGE" "$LICENSE" | sed 's/\\//g' >&2
 	if [ -z "$2" ]; then exit 64; fi
 	exit $2
 }
