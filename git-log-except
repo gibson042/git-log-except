@@ -1,9 +1,9 @@
 #!/bin/sh
 NAME='https://github.com/gibson042/git-log-except'
 VERSION=0.0.1
-DESCRIPTION='Executes git log, excluding commits matching provided filters.'
+DESCRIPTION='Show git commits not matching provided filters, honoring all git log options.'
 USAGE='<command> |\
-       [[--]verbose] [<filter options>] [-- <format options>] [<revision range>] [[--] <path>...]\
+       [[--]verbose] [<exclusion options>] [-- <output options>] [<commit range>] [[--] <path>...]\
 \
 Commands:\
    [--]help     Display this message\
@@ -32,33 +32,31 @@ main () {
 	case "$1" in --verbose|verbose) shift; VERBOSE= ;; esac
 
 	# Chunk CLI options/arguments
-	filters=
+	omit=
 	format=
 	rev_path=
-	section=filters
+	section=omit
 	for opt do
 		case "$opt" in
 			--)
-				if [ $section = filters ]; then section=format; continue; fi
+				if [ $section = omit ]; then section=format; continue; fi
 				if [ $section = format ]; then section=rev_path; continue; fi
 				;;
 			-*)
-				if [ $section = filters ]; then filters="$filters `quote "$opt"`"; continue; fi
+				if [ $section = omit ]; then omit="$omit `quote "$opt"`"; continue; fi
 				if [ $section = format ]; then format="$format `quote "$opt"`"; continue; fi
 				;;
 		esac
 		rev_path="$rev_path `quote "$opt"`"
 	done
-	$VERBOSE printf >&2 'Filters:%s\nFormat:%s\nRevision/Path:%s\n' \
-		"$filters" "$format" "$rev_path"
+	$VERBOSE printf >&2 'exclude:%s\nformat:%s\nrevision/path:%s\n' "$omit" "$format" "$rev_path"
 
 	# Write the excluded commit hashes to an auto-removed temp file
 	tmp="`mktemp`"
+	$VERBOSE printf >&2 'temp file: %s\n' "$tmp"
 	trap 'opt=; if [ "$VERBOSE" != : ]; then opt=-v; fi; rm $opt "$tmp" >&2' 0
-	if [ -n "$filters" ]; then
-		eval "set -- git log $filters --format=%H $rev_path"; "$@" >"$tmp"
-	fi
-	$VERBOSE awk >&2 -v MSG='Commits to exclude: ' -v HEAD=3 \
+	if [ -n "$omit" ]; then eval "set -- git log $omit --format=%H $rev_path"; "$@" >"$tmp"; fi
+	$VERBOSE awk >&2 -v MSG='commits to exclude: ' -v HEAD=3 \
 		'NR<=HEAD{l=l ORS $0} END{print MSG NR l; if(NR>HEAD) print "..."; else print "---"}' "$tmp"
 
 	# Log _only_ (--no-walk) those commits NOT found above
