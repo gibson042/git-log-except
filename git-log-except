@@ -3,12 +3,12 @@ NAME='https://github.com/gibson042/git-log-except'
 VERSION=0.0.1
 DESCRIPTION='Show git commits not matching provided filters, honoring all git log options.'
 LICENSE='This is free and unencumbered software released into the public domain.'
-USAGE='<command> |\
+USAGE='[--]<command> |\
        [[--]verbose] [<exclusion options>] [-- <output options>] [<commit range>] [[--] <path>...]\
 \
 Commands:\
-   [--]help     Display this message\
-   [--]version  Show software version'
+   help     Display this message\
+   version  Show software version'
 
 # Exit immediately upon failure
 set -e
@@ -20,11 +20,18 @@ if { printf %s "$CMD" | grep [[:space:]] && ! command -v "$CMD"; } >/dev/null 2>
 
 # usage [<error message> [<exit code>]]
 usage () {
+	# TTY output gets a bolded name and underlined URL
+	if [ -t 2 ]; then
+		ansify='{ sub(/[^/]+$/, "\x1b[1m&\x1b[22m"); if(/[/]/) $0="\x1b[4m" $0 "\x1b[0m"; print }'
+		NAME="`echo $NAME | awk "$ansify"`"
+	fi
+
 	message="$1"
 	if [ -z "$1" ]; then message="`printf '%s %s\n%s' "$NAME" "$VERSION" "$DESCRIPTION"`"; fi
 	printf '%s\n\nUsage: %s %s\n\n%s\n' "$message" "$CMD" "$USAGE" "$LICENSE" | sed 's/\\//g' >&2
-	if [ -z "$2" ]; then exit 64; fi
-	exit $2
+
+	if [ -n "$2" ]; then exit $2; fi
+	exit 64
 }
 
 main () {
