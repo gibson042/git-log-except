@@ -27,10 +27,10 @@ usage () {
 	fi
 
 	message="$1"
-	if [ -z "$1" ]; then message="`printf '%s %s\n%s' "$NAME" "$VERSION" "$DESCRIPTION"`"; fi
+	if [ "z$1" = z ]; then message="`printf '%s %s\n%s' "$NAME" "$VERSION" "$DESCRIPTION"`"; fi
 	printf '%s\n\nUsage: %s %s\n\n%s\n' "$message" "$CMD" "$USAGE" "$LICENSE" | sed 's/\\//g' >&2
 
-	if [ -n "$2" ]; then exit $2; fi
+	if [ "z$2" != z ]; then exit $2; fi
 	exit 64
 }
 
@@ -62,8 +62,8 @@ main () {
 	# Write the excluded commit hashes to an auto-removed temp file
 	tmp="`mktemp`"
 	$VERBOSE printf >&2 'temp file: %s\n' "$tmp"
-	trap 'opt=; if [ "$VERBOSE" != : ]; then opt=-v; fi; rm $opt "$tmp" >&2' 0
-	if [ -n "$omit" ]; then eval "set -- git log $omit --format=%H $rev_path"; "$@" >"$tmp"; fi
+	trap 'opt=; if [ "z$VERBOSE" != z: ]; then opt=-v; fi; rm $opt "$tmp" >&2' 0
+	if [ "z$omit" != z ]; then eval "set -- git log $omit --format=%H $rev_path"; "$@" >"$tmp"; fi
 	$VERBOSE awk >&2 -v MSG='commits to exclude: ' -v HEAD=3 \
 		'NR<=HEAD{l=l ORS $0} END{print MSG NR l; if(NR>HEAD) print "..."; else print "---"}' "$tmp"
 
@@ -78,7 +78,7 @@ main () {
 quote () { printf '%s\n' "$1" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/'/"; }
 
 # Normal mode relies on script arguments
-if [ -n "$CMD" ]; then main "$@"; exit; fi
+if [ "z$CMD" != z ]; then main "$@"; exit; fi
 
 # git alias mode uses the appended arguments
 main
