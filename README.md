@@ -2,7 +2,7 @@
 Show git commits not matching provided filters, honoring all `git log` options.
 
 ## Installation
-Copy [`git-log-except`](https://github.com/gibson042/git-log-except/raw/master/git-log-except) to a directory in your path (e.g., `/usr/local/bin/`) so [git can pick it up](http://stackoverflow.com/a/10978296) as a "[git-]dashed external". If there is demand, installation as a git alias is also possible.
+Copy [`git-log-except`](https://github.com/gibson042/git-log-except/raw/master/git-log-except) to a directory in your path (e.g., `/usr/local/bin/`) so [git can pick it up](http://stackoverflow.com/a/10978296) as a "[git-]dashed external". If there is demand, installation as an inline git alias is also possible.
 
 ## Usage
 ```sh
